@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  piper-tts:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: localhost/ezansi-capability-tts-piper:1.0.0
+    container_name: piper-tts-capability
+    ports:
+      - "10200:10200"
+    volumes:
+      - piper-models:/models
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:10200/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  piper-models:
+    driver: local

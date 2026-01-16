@@ -1,0 +1,45 @@
+{
+  "name": "piper-tts",
+  "version": "1.0.0",
+  "type": "capability",
+  "description": "Text-to-speech synthesis using Piper.",
+  "provides": ["text-to-speech"],
+  "requires": [],
+  "api": {
+    "endpoint": "http://localhost:10200",
+    "type": "REST",
+    "health_check": "/health"
+  },
+  "resources": {
+    "ram_mb": 600,
+    "cpu_cores": 1,
+    "storage_mb": 1500,
+    "accelerator": "none"
+  },
+  "endpoints": {
+    "health": {
+      "method": "GET",
+      "path": "/health",
+      "input": "none",
+      "output": "application/json"
+    },
+    "capability": {
+      "method": "GET",
+      "path": "/.well-known/capability.json",
+      "input": "none",
+      "output": "application/json"
+    },
+    "synthesize": {
+      "method": "POST",
+      "path": "/synthesize",
+      "input": "application/json",
+      "output": "audio/wav"
+    }
+  },
+  "container": {
+    "image": "localhost/ezansi-capability-tts-piper:1.0.0",
+    "port": 10200,
+    "restart_policy": "unless-stopped"
+  },
+  "target_platform": "Raspberry Pi 4/5"
+}
