@@ -41,5 +41,7 @@
     "port": 10200,
     "restart_policy": "unless-stopped"
   },
-  "target_platform": "Raspberry Pi 4/5"
+  "target_platform": "Raspberry Pi 4/5",
+  "target_platforms": ["Raspberry Pi 4/5", "AMD64 (x86-64)"],
+  "supported_architectures": ["arm64", "amd64"]
 }
