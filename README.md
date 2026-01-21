@@ -19,6 +19,20 @@ curl -s -X POST http://localhost:10200/synthesize \
 file /tmp/tts.wav
 ```
 
+## Stop / restart
+
+- List running containers for this capability:
+
+```bash
+podman ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' | grep piper-tts || true
+```
+
+- Stop the stack:
+
+```bash
+./scripts/stop.sh --down
+```
+
 ## API
 
 - `GET /health`
