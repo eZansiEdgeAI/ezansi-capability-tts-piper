@@ -55,7 +55,7 @@
     "port": 10200,
     "restart_policy": "unless-stopped",
     "environment": {
-      "AUTO_DOWNLOAD_DEFAULT_PIPER_MODEL": "0",
+      "AUTO_DOWNLOAD_DEFAULT_PIPER_MODEL": "1",
       "DEFAULT_PIPER_VOICE_ID": "en_US-lessac-medium"
     }
   },

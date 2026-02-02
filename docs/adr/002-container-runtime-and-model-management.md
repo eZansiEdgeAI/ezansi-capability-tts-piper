@@ -71,6 +71,12 @@ We standardize on the following runtime architecture and bootstrapping approach:
   - Piper voice discovery counts
   - Default model download status (`disabled|not_needed|in_progress|done|failed`)
 
+### 8. Optional Preflight (Resource Hints)
+
+- Provide an optional preflight script (`scripts/configure-hardware.sh`) that can generate a local `.env` file.
+- The `.env` values are used by `podman-compose.yml` to apply conservative container resource limits derived from available RAM (see ADR-001).
+- Preflight is best-effort: the container should still start without it, using safe defaults.
+
 ## Consequences
 
 ### Positive

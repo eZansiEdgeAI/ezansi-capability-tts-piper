@@ -7,11 +7,18 @@ services:
       dockerfile: Containerfile
     image: localhost/ezansi-capability-tts-piper:1.0.0
     container_name: piper-tts-capability
+    # Optional resource hints written by scripts/configure-hardware.sh into .env
+    # (podman-compose/docker-compose will substitute these variables).
+    cpus: ${TTS_CPU_LIMIT:-1.0}
+    mem_limit: ${TTS_MEMORY_LIMIT:-600M}
     ports:
       - "10200:10200"
     volumes:
       - piper-models:/models
     restart: unless-stopped
+    environment:
+      - AUTO_DOWNLOAD_DEFAULT_PIPER_MODEL=${AUTO_DOWNLOAD_DEFAULT_PIPER_MODEL:-1}
+      - DEFAULT_PIPER_VOICE_ID=${DEFAULT_PIPER_VOICE_ID:-en_US-lessac-medium}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:10200/health"]
       interval: 30s
