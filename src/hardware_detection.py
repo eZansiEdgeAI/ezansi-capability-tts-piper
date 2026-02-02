@@ -55,20 +55,26 @@ class HardwareDetector:
             Available RAM in megabytes
         """
         try:
-            # Try reading from /proc/meminfo (Linux)
+            # Read /proc/meminfo once and check for both MemAvailable and MemTotal
+            mem_available = None
+            mem_total = None
+            
             with open("/proc/meminfo", "r") as f:
                 for line in f:
                     if line.startswith("MemAvailable:"):
                         # MemAvailable is in kB
-                        kb = int(line.split()[1])
-                        return kb // 1024
+                        mem_available = int(line.split()[1]) // 1024
+                    elif line.startswith("MemTotal:"):
+                        # MemTotal is in kB
+                        mem_total = int(line.split()[1]) // 1024
+                    
+                    # Stop reading once we have both values
+                    if mem_available is not None and mem_total is not None:
+                        break
             
-            # Fallback to MemTotal if MemAvailable not found
-            with open("/proc/meminfo", "r") as f:
-                for line in f:
-                    if line.startswith("MemTotal:"):
-                        kb = int(line.split()[1])
-                        return kb // 1024
+            # Prefer MemAvailable, fallback to MemTotal
+            return mem_available if mem_available is not None else (mem_total or 512)
+            
         except (FileNotFoundError, ValueError, IndexError):
             pass
         

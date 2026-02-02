@@ -7,6 +7,7 @@ with dynamic hardware configuration.
 
 import os
 import subprocess
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
@@ -23,11 +24,40 @@ PIPER_BIN = os.getenv("PIPER_BIN", "piper")
 PIPER_MODEL_PATH = os.getenv("PIPER_MODEL_PATH", "/models/voice.onnx")
 PIPER_CONFIG_PATH = os.getenv("PIPER_CONFIG_PATH", "/models/voice.onnx.json")
 
-# Initialize FastAPI app
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events."""
+    # Startup: Log hardware information
+    hw_info = get_hardware_info()
+    recommended = get_recommended_resources()
+    
+    print("=" * 60)
+    print("Piper TTS Capability Starting")
+    print("=" * 60)
+    print(f"Detected Hardware:")
+    print(f"  Architecture: {hw_info['architecture']}")
+    print(f"  RAM: {hw_info['ram_mb']} MB")
+    print(f"  CPU Cores: {hw_info['cpu_cores']}")
+    print(f"  GPU: {hw_info['gpu_type']}")
+    print(f"\nRecommended Resources:")
+    print(f"  RAM: {recommended['ram_mb']} MB")
+    print(f"  CPU Cores: {recommended['cpu_cores']}")
+    print(f"  Accelerator: {recommended['accelerator']}")
+    print("=" * 60)
+    
+    yield
+    
+    # Shutdown: cleanup if needed
+    print("Piper TTS Capability shutting down")
+
+
+# Initialize FastAPI app with lifespan
 app = FastAPI(
     title="Piper TTS Capability",
     description="Text-to-speech synthesis using Piper with dynamic hardware detection",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 
@@ -201,24 +231,3 @@ def _create_wav_header(data_size: int, sample_rate: int = 22050,
     header.extend(data_size.to_bytes(4, 'little'))
     
     return bytes(header)
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Log hardware information on startup."""
-    hw_info = get_hardware_info()
-    recommended = get_recommended_resources()
-    
-    print("=" * 60)
-    print("Piper TTS Capability Starting")
-    print("=" * 60)
-    print(f"Detected Hardware:")
-    print(f"  Architecture: {hw_info['architecture']}")
-    print(f"  RAM: {hw_info['ram_mb']} MB")
-    print(f"  CPU Cores: {hw_info['cpu_cores']}")
-    print(f"  GPU: {hw_info['gpu_type']}")
-    print(f"\nRecommended Resources:")
-    print(f"  RAM: {recommended['ram_mb']} MB")
-    print(f"  CPU Cores: {recommended['cpu_cores']}")
-    print(f"  Accelerator: {recommended['accelerator']}")
-    print("=" * 60)
