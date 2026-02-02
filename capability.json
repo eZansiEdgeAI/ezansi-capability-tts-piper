@@ -2,7 +2,7 @@
   "name": "piper-tts",
   "version": "1.0.0",
   "type": "capability",
-  "description": "Text-to-speech synthesis using Piper.",
+  "description": "Text-to-speech synthesis using Piper (and optional eSpeak NG) with dynamic hardware detection.",
   "provides": ["text-to-speech"],
   "requires": [],
   "api": {
@@ -34,12 +34,30 @@
       "path": "/synthesize",
       "input": "application/json",
       "output": "audio/wav"
+    },
+    "voices": {
+      "method": "GET",
+      "path": "/voices",
+      "input": "none",
+      "output": "application/json",
+      "description": "Lists Piper voices/models discovered under /models"
+    },
+    "voices_espeak": {
+      "method": "GET",
+      "path": "/voices/espeak",
+      "input": "none",
+      "output": "application/json",
+      "description": "Lists eSpeak NG voices available in the container"
     }
   },
   "container": {
     "image": "localhost/ezansi-capability-tts-piper:1.0.0",
     "port": 10200,
-    "restart_policy": "unless-stopped"
+    "restart_policy": "unless-stopped",
+    "environment": {
+      "AUTO_DOWNLOAD_DEFAULT_PIPER_MODEL": "0",
+      "DEFAULT_PIPER_VOICE_ID": "en_US-lessac-medium"
+    }
   },
   "target_platform": "Raspberry Pi 4/5"
 }
