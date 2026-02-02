@@ -100,5 +100,17 @@ See `scripts/pull-voice.sh` (if available).
 
 ## Documentation
 
+- **[Cold Start Guide](COLD_START.md)** - Step-by-step installation from scratch
+- **[Testing Guide](TESTING.md)** - Manual testing procedures and test suite
 - [Architecture Decision Records](docs/adr/) - Documents key architectural decisions
   - [ADR-001: Hardware Detection and Dynamic Resource Configuration](docs/adr/001-hardware-detection-and-dynamic-resources.md)
+
+## Testing
+
+Run the automated test suite to verify the TTS capability:
+
+```bash
+./scripts/test-suite.sh
+```
+
+For detailed manual testing procedures, see [TESTING.md](TESTING.md).
