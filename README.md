@@ -97,3 +97,8 @@ See `scripts/pull-voice.sh` (if available).
 - Systems with NVIDIA CUDA GPUs
 - Systems with AMD ROCm GPUs
 - Systems with Intel OpenVINO
+
+## Documentation
+
+- [Architecture Decision Records](docs/adr/) - Documents key architectural decisions
+  - [ADR-001: Hardware Detection and Dynamic Resource Configuration](docs/adr/001-hardware-detection-and-dynamic-resources.md)
