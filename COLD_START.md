@@ -30,6 +30,13 @@ Run the hardware configuration script to automatically detect your system capabi
 ./scripts/configure-hardware.sh
 ```
 
+If you get a permissions error, run:
+
+```bash
+chmod +x ./scripts/configure-hardware.sh
+./scripts/configure-hardware.sh
+```
+
 **Expected Output:**
 ```
 Detecting system hardware...
@@ -50,37 +57,32 @@ You can now run: podman-compose up -d
 
 This creates a `.env` file with optimal settings for your hardware.
 
-### 3. (Optional) Download a Voice Model
-
-The Piper TTS requires a voice model file. You can download a model from the [Piper voices repository](https://github.com/rhasspy/piper/releases).
-
-For a quick test, download a lightweight English voice:
+### 3. Start the Service (Build + Run)
 
 ```bash
-# Create models directory
-mkdir -p models
-
-# Download a voice model (example: en_US-lessac-medium)
-cd models
-wget https://github.com/rhasspy/piper/releases/download/v1.2.0/voice-en-us-lessac-medium.onnx -O voice.onnx
-wget https://github.com/rhasspy/piper/releases/download/v1.2.0/voice-en-us-lessac-medium.onnx.json -O voice.onnx.json
-cd ..
+podman-compose up -d --build
 ```
 
-**Note**: The container will mount a volume at `/models`. If no model is present, the service will start but synthesis will fail until a model is provided.
+By default, the container will attempt to auto-download a default English Piper model on first start (downloads into the `/models` volume). This means you do not need to manually download a voice model for a first-run test.
 
-If you need a lightweight offline fallback while you're still sourcing neural models, the container also includes an eSpeak NG engine. Language availability depends on which voice data is present in the image; Zulu is not bundled by default in this project at the moment.
+If you're offline on first start, the service will still come up and eSpeak NG will still work, but Piper will remain unavailable until a model exists under `/models`.
 
-You can also store multiple Piper models under `/models` (including nested subdirectories) and list them via:
+To disable auto-download, set `AUTO_DOWNLOAD_DEFAULT_PIPER_MODEL=0` (in `.env` or in `podman-compose.yml`). To change which voice is downloaded, set `DEFAULT_PIPER_VOICE_ID`.
+
+### 4. Verify the Service is Running
+
+Check container status:
 
 ```bash
-curl -s http://localhost:10200/voices | jq
+podman ps
 ```
 
-### 4. Build the Container Image
+You should see the `piper-tts-capability` container running.
+
+Check logs:
 
 ```bash
-podman-compose build
+podman logs piper-tts-capability
 ```
 
 **Expected Output:**
@@ -97,85 +99,74 @@ Successfully built localhost/ezansi-capability-tts-piper:1.0.0
 
 **Build Time**: Approximately 2-5 minutes depending on your internet connection and system performance.
 
-### 5. Start the Service
-
-```bash
-podman-compose up -d
-```
-
-By default, the container will attempt to auto-download a default English Piper model on first start (downloads into the `/models` volume).
-
-To disable auto-download, add this under the service in `podman-compose.yml`:
-
-```yaml
-environment:
-  - AUTO_DOWNLOAD_DEFAULT_PIPER_MODEL=0
-```
-
-**Expected Output:**
-```
-[+] Running 2/2
- ✔ Volume "piper-models"    Created
- ✔ Container piper-tts-capability  Started
-```
-
-### 6. Verify the Service is Running
-
-Check container status:
-
-```bash
-podman ps
-```
-
-You should see the `piper-tts-capability` container running.
-
-Check the service logs to see hardware detection:
-
-```bash
-podman logs piper-tts-capability
-```
-
-**Expected Output:**
-```
-============================================================
-Piper TTS Capability Starting
-============================================================
-Detected Hardware:
-  Architecture: x86_64
-  RAM: 14183 MB
-  CPU Cores: 4
-  GPU: none
-
-Recommended Resources:
-  RAM: 600 MB
-  CPU Cores: 2
-  Accelerator: none
-============================================================
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:10200 (Press CTRL+C to quit)
-```
-
-### 7. Test the Health Endpoint
+### 5. Test the Health Endpoint
 
 ```bash
 curl http://localhost:10200/health | jq
 ```
 
-**Expected Output:**
+**Expected Output (shape):**
 ```json
 {
-  "status": "degraded",
-  "model_loaded": false,
-  "hardware": {
-    "architecture": "x86_64",
-    "ram_mb": 14183,
-    "cpu_cores": 4,
-    "gpu_type": "none"
-  }
+  "status": "healthy",
+  "model_loaded": true,
+  "hardware": {"architecture": "...", "ram_mb": 0, "cpu_cores": 0, "gpu_type": "..."},
+  "default_model_download": {"enabled": true, "voice_id": "en_US-lessac-medium", "state": "done", "error": null},
+  "engines": {"piper": {"available": true, "ready": true}, "espeak": {"available": true, "ready": true}},
+  "voices": {"piper_total": 1, "piper_ready": 1}
 }
 ```
 
-**Note**: Status will be "degraded" if no voice model is loaded. Once you add a model, it will change to "healthy".
+**Notes:**
+
+- `status` is `healthy` if either Piper or eSpeak is ready.
+- If this is your first run, `default_model_download.state` may be `in_progress` for a few minutes while the voice downloads.
+- If you are offline, `default_model_download.state` may be `failed` and Piper synthesis will return `503` until a model exists under `/models`.
+
+### 6. List Voices
+
+Piper models discovered under `/models`:
+
+```bash
+curl -s http://localhost:10200/voices | jq
+```
+
+eSpeak NG voices available in the image:
+
+```bash
+curl -s http://localhost:10200/voices/espeak | jq
+```
+
+### 7. Synthesize Speech (Write WAV to File)
+
+Test eSpeak first (works even if Piper is still downloading):
+
+```bash
+curl -s -X POST http://localhost:10200/synthesize \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"Hello from eSpeak","engine":"espeak","language":"en"}' \
+  --output /tmp/espeak.wav
+file /tmp/espeak.wav
+```
+
+Then test Piper (once `default_model_download.state` is `done`, or if you provided your own model under `/models`):
+
+```bash
+curl -s -X POST http://localhost:10200/synthesize \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"Hello from Piper"}' \
+  --output /tmp/piper.wav
+file /tmp/piper.wav
+```
+
+If you downloaded the default model, you can optionally force it explicitly as `voice: "voice"` (because it’s stored as `/models/voice.onnx`):
+
+```bash
+curl -s -X POST http://localhost:10200/synthesize \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"Hello","engine":"piper","voice":"voice"}' \
+  --output /tmp/piper-voice.wav
+```
 
 ## Troubleshooting
 
@@ -192,11 +183,30 @@ podman logs piper-tts-capability
 
 ### Service Returns 503 on Synthesis
 
-**Cause**: No voice model is loaded.
+**Cause**: Piper model isn’t ready yet.
 
-**Solution**: Follow step 3 above to download a voice model, then restart:
+**Solutions:**
+
+- Use eSpeak while waiting: set `{"engine":"espeak"}` in your request.
+- Wait for the auto-download to complete and check `default_model_download.state` via `/health`.
+- If you’re offline, provide a Piper model under `/models` (and ensure both `voice.onnx` and `voice.onnx.json` exist).
+
+Restart after adding a model:
+
 ```bash
 podman-compose restart
+```
+
+### “Unsupported WAV format” or `file` doesn’t show RIFF/WAVE
+
+This usually means you saved an HTTP error response body as a `.wav`.
+
+Re-run with `-i` to see the HTTP status and content-type:
+
+```bash
+curl -i -X POST http://localhost:10200/synthesize \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"Hello"}'
 ```
 
 ### Permission Issues with Scripts
@@ -221,7 +231,20 @@ Once the service is running:
 | `./scripts/configure-hardware.sh` | Detect hardware and generate `.env` |
 | `podman-compose build` | Build the container image |
 | `podman-compose up -d` | Start the service |
+| `podman-compose up -d --build` | Build + start in one command |
 | `podman-compose down` | Stop the service |
 | `podman-compose restart` | Restart the service |
 | `podman logs piper-tts-capability` | View service logs |
 | `curl http://localhost:10200/health` | Check service health |
+
+## Reset to a True “First Run” (Optional)
+
+If you want to repeat a cold start from scratch (including re-downloading the default voice), remove the models volume:
+
+```bash
+podman-compose down
+
+# Find the volume name and remove it
+podman volume ls | grep -E 'piper-models|piper_models|piper-model'
+podman volume rm ezansi-capability-tts-piper_piper-models
+```
