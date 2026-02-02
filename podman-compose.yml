@@ -12,6 +12,17 @@ services:
     volumes:
       - piper-models:/models
     restart: unless-stopped
+    # Resource limits are dynamically configured based on detected hardware
+    # Override these values using environment variables if needed
+    deploy:
+      resources:
+        limits:
+          # Default limits - adjust based on your system
+          cpus: '${TTS_CPU_LIMIT:-1.0}'
+          memory: ${TTS_MEMORY_LIMIT:-600M}
+        reservations:
+          cpus: '${TTS_CPU_RESERVATION:-0.5}'
+          memory: ${TTS_MEMORY_RESERVATION:-300M}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:10200/health"]
       interval: 30s

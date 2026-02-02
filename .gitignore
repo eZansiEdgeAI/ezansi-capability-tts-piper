@@ -16,3 +16,6 @@ models/
 .idea/
 *~
 
+# Auto-generated configuration
+.env
+
